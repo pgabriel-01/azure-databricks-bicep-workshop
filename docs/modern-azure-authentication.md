@@ -97,7 +97,7 @@ gh variable set AZURE_SUBSCRIPTION_ID --body "$SUBSCRIPTION_ID"
 
 ### Complete Example
 ```yaml
-name: 'Modern Terraform CI/CD'
+name: 'Modern Bicep CI/CD'
 
 on:
   push:
@@ -111,21 +111,15 @@ permissions:
   security-events: write
 
 env:
-  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  ARM_USE_OIDC: true
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
 
 jobs:
-  terraform:
+  bicep:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
-      with:
-        terraform_version: '1.12.1'
     
     - name: Azure Login with OIDC
       uses: azure/login@v2
@@ -134,12 +128,13 @@ jobs:
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
         subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     
-    - name: Terraform Init
+    - name: Install Bicep
+      run: az bicep install
+    
+    - name: Bicep Lint
       run: |
-        terraform init \
-          -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
-          -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
-          -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}"
+        az bicep build --file bicep/main.bicep --stdout > /dev/null
+        echo "Bicep linting completed successfully"
 ```
 
 ---
@@ -161,9 +156,9 @@ jobs:
 {
   "name": "GitHubActions",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:your-org/terraform-databricks-workshop:ref:refs/heads/main",
+  "subject": "repo:your-org/azure-databricks-bicep-workshop:ref:refs/heads/main",
   "audiences": ["api://AzureADTokenExchange"],
-  "description": "GitHub Actions OIDC for Terraform deployments"
+  "description": "GitHub Actions OIDC for Bicep deployments"
 }
 ```
 

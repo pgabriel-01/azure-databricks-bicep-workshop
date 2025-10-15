@@ -34,9 +34,6 @@ For all new projects, use OIDC authentication for maximum security and zero main
 - `AZURE_CLIENT_ID` - App Registration ID
 - `AZURE_TENANT_ID` - Azure AD Tenant ID  
 - `AZURE_SUBSCRIPTION_ID` - Target Azure subscription
-- `TF_STATE_RESOURCE_GROUP` - Terraform state storage
-- `TF_STATE_STORAGE_ACCOUNT` - Terraform state storage
-- `TF_STATE_CONTAINER` - Terraform state storage
 
 ---
 
@@ -45,20 +42,19 @@ For all new projects, use OIDC authentication for maximum security and zero main
 ### Modern OIDC Workflow
 
 ```yaml
-name: 'Terraform CI/CD'
+name: 'Bicep CI/CD'
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-  ARM_USE_OIDC: true
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
 
 jobs:
-  terraform:
+  bicep:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -133,7 +129,7 @@ gh variable list
 After authentication setup:
 
 1. **Test the authentication** with a simple workflow
-2. **Deploy Terraform infrastructure** following Module 2-3
+2. **Deploy Bicep infrastructure** following Module 2-3
 3. **Set up data pipelines** following Module 4
 4. **Implement full CI/CD** following Module 5
 5. **Monitor and maintain** the deployment
