@@ -202,7 +202,7 @@ jobs:
         deployment_name=$(az deployment group list --resource-group "$rg_name" --query "[0].name" -o tsv)
         
         # Get outputs as compact JSON (single line)
-        outputs=$(az deployment group show --resource-group "$rg_name" --name "$deployment_name" --query "properties.outputs" -o json --compact-output)
+        outputs=$(az deployment group show --resource-group "$rg_name" --name "$deployment_name" --query "properties.outputs" -o json)
         
         # Store as GitHub output using multiline format
         {
