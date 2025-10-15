@@ -2,7 +2,7 @@
 
 This directory contains equivalent Infrastructure as Code implementations for deploying Azure Databricks infrastructure using both **Bicep** and **Terraform**. This comparison demonstrates the differences between the two approaches and helps understand when to use each tool.
 
-## 📂 Directory Structure
+## Directory Structure
 
 ```
 bicep-comparison/
@@ -22,7 +22,7 @@ terraform-comparison/
     └── databricks/        # Databricks workspace
 ```
 
-## 🎯 Infrastructure Components
+## Infrastructure Components
 
 Both implementations deploy the same Azure resources:
 
@@ -31,7 +31,7 @@ Both implementations deploy the same Azure resources:
 - **Storage**: Data Lake Gen2 storage account with containers
 - **Databricks**: Azure Databricks workspace with VNet injection
 
-## 🔍 Key Differences
+## Key Differences
 
 ### **Syntax and Readability**
 
@@ -91,10 +91,10 @@ resource "azurerm_storage_account" "main" {
 
 | Feature | Bicep | Terraform |
 |---------|-------|-----------|
-| **Compile-time validation** | ✅ Built-in | ⚠️ Plan-time only |
-| **IntelliSense support** | ✅ Excellent | ✅ Good |
-| **Parameter validation** | ✅ `@allowed`, `@minValue` decorators | ✅ Validation blocks |
-| **Resource API validation** | ✅ Latest APIs always | ⚠️ Provider-dependent |
+| **Compile-time validation** | Yes - Built-in | Warning - Plan-time only |
+| **IntelliSense support** | Yes - Excellent | Yes - Good |
+| **Parameter validation** | Yes - `@allowed`, `@minValue` decorators | Yes - Validation blocks |
+| **Resource API validation** | Yes - Latest APIs always | Warning - Provider-dependent |
 
 ### **Deployment and Planning**
 
@@ -136,20 +136,20 @@ module "networking" {
 }
 ```
 
-## 📊 Comparison Matrix
+## Comparison Matrix
 
 | Criteria | Bicep | Terraform | Winner |
 |----------|-------|-----------|--------|
-| **Azure Native** | ✅ Built for Azure | ⚠️ Multi-cloud focus | Bicep |
-| **Learning Curve** | ✅ Easier for Azure | ⚠️ Steeper | Bicep |
-| **State Management** | ✅ Automatic | ❌ Manual setup | Bicep |
-| **Multi-cloud** | ❌ Azure only | ✅ Excellent | Terraform |
-| **Community/Ecosystem** | ⚠️ Growing | ✅ Mature | Terraform |
-| **Provider Updates** | ✅ Always current | ⚠️ Lag time | Bicep |
-| **IDE Support** | ✅ Excellent VS Code | ✅ Good | Tie |
-| **Template Portability** | ❌ Azure only | ✅ Multi-cloud | Terraform |
+| **Azure Native** | Yes - Built for Azure | Warning - Multi-cloud focus | Bicep |
+| **Learning Curve** | Yes - Easier for Azure | Warning - Steeper | Bicep |
+| **State Management** | Yes - Automatic | No - Manual setup | Bicep |
+| **Multi-cloud** | No - Azure only | Yes - Excellent | Terraform |
+| **Community/Ecosystem** | Warning - Growing | Yes - Mature | Terraform |
+| **Provider Updates** | Yes - Always current | Warning - Lag time | Bicep |
+| **IDE Support** | Yes - Excellent VS Code | Yes - Good | Tie |
+| **Template Portability** | No - Azure only | Yes - Multi-cloud | Terraform |
 
-## 🚀 Getting Started
+## Getting Started
 
 ### **Bicep Deployment**
 ```bash
@@ -185,7 +185,7 @@ terraform plan
 terraform apply
 ```
 
-## 🎓 Workshop Usage
+## Workshop Usage
 
 ### **For Learning Bicep**
 - Start with the Bicep implementation
@@ -205,30 +205,30 @@ terraform apply
 - Evaluate deployment speed and experience
 - Consider maintenance and team collaboration aspects
 
-## 💡 When to Choose Which
+## When to Choose Which
 
 ### **Choose Bicep When:**
-- ✅ Working exclusively with Azure
-- ✅ Team is new to Infrastructure as Code
-- ✅ Want automatic state management
-- ✅ Need always-current Azure APIs
-- ✅ Prefer declarative, clean syntax
+- Working exclusively with Azure
+- Team is new to Infrastructure as Code
+- Want automatic state management
+- Need always-current Azure APIs
+- Prefer declarative, clean syntax
 
 ### **Choose Terraform When:**
-- ✅ Multi-cloud or hybrid deployment
-- ✅ Existing Terraform expertise/infrastructure
-- ✅ Need advanced provisioning features
-- ✅ Require complex conditional logic
-- ✅ Working with non-Azure resources
+- Multi-cloud or hybrid deployment
+- Existing Terraform expertise/infrastructure
+- Need advanced provisioning features
+- Require complex conditional logic
+- Working with non-Azure resources
 
-## 🔧 Next Steps
+## Next Steps
 
 1. **Try Both**: Deploy infrastructure with both tools
 2. **Compare Results**: Examine deployed resources
 3. **Evaluate Workflow**: Consider which fits your team better
 4. **Make Decision**: Choose based on your specific needs
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Bicep Documentation](https://docs.microsoft.com/azure/azure-resource-manager/bicep/)
 - [Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
