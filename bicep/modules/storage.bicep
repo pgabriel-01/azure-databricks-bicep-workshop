@@ -60,7 +60,8 @@ resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01
       enabled: true
       retentionInDays: 7
     }
-    isVersioningEnabled: true
+    // Note: Versioning is not supported with Data Lake Gen2 (hierarchical namespace)
+    // isVersioningEnabled: false (omitted as it's not compatible with isHnsEnabled: true)
   }
 }
 
