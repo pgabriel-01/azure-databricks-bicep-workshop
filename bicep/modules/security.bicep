@@ -54,7 +54,9 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     }
     enableSoftDelete: true
     softDeleteRetentionInDays: 90
-    enablePurgeProtection: environment == 'prod' ? true : false
+    // Only enable purge protection for production environments
+    // For dev/staging, omit this property (don't set to false)
+    ...(environment == 'prod' ? { enablePurgeProtection: true } : {})
     networkAcls: {
       defaultAction: 'Allow'
       bypass: 'AzureServices'
