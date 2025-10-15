@@ -1,6 +1,6 @@
-// Bicep Azure Databricks Workshop - Main Template
+// Bicep Azure Databricks Workshop - Modular Main Template
 // This template demonstrates Infrastructure as Code best practices
-// for deploying Azure Databricks workspace with supporting resources
+// for deploying Azure Databricks workspace with supporting resources using modules
 
 @description('Environment name (dev, staging, prod)')
 @allowed(['dev', 'staging', 'prod'])
@@ -49,269 +49,105 @@ param deploymentTime string = utcNow('yyyy-MM-dd')
 
 // Variables for consistent naming and resource configuration
 var resourcePrefix = '${environment}-${projectName}'
-var suffix = uniqueString(resourceGroup().id)
-
-// Common tags applied to all resources
 var commonTags = {
   Environment: environment
   Project: projectName
-  ManagedBy: 'Bicep'
   Owner: owner
   CostCenter: costCenter
-  CreatedDate: deploymentTime
-  Repository: 'bicep-databricks-workshop'
+  DeployedBy: 'Bicep'
+  DeploymentTime: deploymentTime
 }
 
-// Resource naming with suffix
-var databricksWorkspaceName = '${resourcePrefix}-dbw-${suffix}'
-var storageAccountBase = replace('${resourcePrefix}sa${suffix}', '-', '')
-var storageAccountName = length(storageAccountBase) > 24 ? take(storageAccountBase, 24) : (length(storageAccountBase) < 3 ? '${storageAccountBase}abc' : storageAccountBase)
-var keyVaultName = take('${resourcePrefix}-kv-${suffix}', 24)
-var virtualNetworkName = '${resourcePrefix}-vnet-${suffix}'
-var logAnalyticsName = '${resourcePrefix}-law-${suffix}'
-
-// Virtual Network for Databricks (VNet injection)
-resource virtualNetwork 'Microsoft.Network/virtualNetworks@2023-11-01' = {
-  name: virtualNetworkName
-  location: location
-  tags: commonTags
-  properties: {
-    addressSpace: {
-      addressPrefixes: ['10.0.0.0/16']
-    }
-    subnets: [
-      {
-        name: 'public-subnet'
-        properties: {
-          addressPrefix: '10.0.1.0/24'
-          delegations: [
-            {
-              name: 'databricks-delegation'
-              properties: {
-                serviceName: 'Microsoft.Databricks/workspaces'
-              }
-            }
-          ]
-          networkSecurityGroup: {
-            id: publicNsg.id
-          }
-        }
-      }
-      {
-        name: 'private-subnet'
-        properties: {
-          addressPrefix: '10.0.2.0/24'
-          delegations: [
-            {
-              name: 'databricks-delegation'
-              properties: {
-                serviceName: 'Microsoft.Databricks/workspaces'
-              }
-            }
-          ]
-          networkSecurityGroup: {
-            id: privateNsg.id
-          }
-        }
-      }
-    ]
+// Deploy networking infrastructure
+module networking 'modules/networking.bicep' = {
+  name: 'networking-deployment'
+  params: {
+    prefix: resourcePrefix
+    location: location
+    vnetAddressPrefix: '10.0.0.0/16'
+    publicSubnetPrefix: '10.0.1.0/24'
+    privateSubnetPrefix: '10.0.2.0/24'
+    tags: commonTags
   }
 }
 
-// Network Security Group for public subnet
-resource publicNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
-  name: '${resourcePrefix}-public-nsg-${suffix}'
-  location: location
-  tags: commonTags
-  properties: {
-    securityRules: []
+// Deploy security infrastructure
+module security 'modules/security.bicep' = {
+  name: 'security-deployment'
+  params: {
+    prefix: resourcePrefix
+    location: location
+    environment: environment
+    logRetentionDays: logRetentionDays
+    keyVaultSku: keyVaultSku
+    tags: commonTags
   }
 }
 
-// Network Security Group for private subnet
-resource privateNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
-  name: '${resourcePrefix}-private-nsg-${suffix}'
-  location: location
-  tags: commonTags
-  properties: {
-    securityRules: []
+// Deploy storage infrastructure
+module storage 'modules/storage.bicep' = {
+  name: 'storage-deployment'
+  params: {
+    prefix: resourcePrefix
+    location: location
+    storageAccountTier: storageAccountTier
+    storageReplicationType: storageReplicationType
+    keyVaultId: security.outputs.keyVaultId
+    tags: commonTags
   }
 }
 
-// Log Analytics Workspace for monitoring
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
-  name: logAnalyticsName
-  location: location
-  tags: commonTags
-  properties: {
-    sku: {
-      name: 'PerGB2018'
-    }
-    retentionInDays: logRetentionDays
-    features: {
-      enableLogAccessUsingOnlyResourcePermissions: true
-    }
+// Deploy Databricks workspace
+module databricks 'modules/databricks.bicep' = {
+  name: 'databricks-deployment'
+  params: {
+    prefix: resourcePrefix
+    location: location
+    databricksSku: databricksSku
+    noPublicIp: noPublicIp
+    vnetId: networking.outputs.vnetId
+    publicSubnetName: networking.outputs.publicSubnetName
+    privateSubnetName: networking.outputs.privateSubnetName
+    tags: commonTags
   }
 }
 
-// Storage Account for data storage
-resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: storageAccountName
-  location: location
-  tags: commonTags
-  sku: {
-    name: '${storageAccountTier}_${storageReplicationType}'
-  }
-  kind: 'StorageV2'
-  properties: {
-    minimumTlsVersion: 'TLS1_2'
-    allowBlobPublicAccess: false
-    supportsHttpsTrafficOnly: true
-    accessTier: 'Hot'
-  }
-}
-
-// Enable blob versioning and configure retention policies
-resource blobServices 'Microsoft.Storage/storageAccounts/blobServices@2023-05-01' = {
-  parent: storageAccount
-  name: 'default'
-  properties: {
-    isVersioningEnabled: true
-    changeFeed: {
-      enabled: true
-    }
-    deleteRetentionPolicy: {
-      enabled: true
-      days: 7
-    }
-    containerDeleteRetentionPolicy: {
-      enabled: true
-      days: 7
-    }
-  }
-}
-
-// Storage container for raw data
-resource rawDataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
-  parent: blobServices
-  name: 'raw-data'
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-// Storage container for processed data
-resource processedDataContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-05-01' = {
-  parent: blobServices
-  name: 'processed-data'
-  properties: {
-    publicAccess: 'None'
-  }
-}
-
-// Key Vault for secrets management
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: keyVaultName
-  location: location
-  tags: commonTags
-  properties: {
-    enabledForDiskEncryption: true
-    tenantId: subscription().tenantId
-    softDeleteRetentionInDays: 7
-    enablePurgeProtection: false
-    sku: {
-      name: keyVaultSku
-      family: 'A'
-    }
-    accessPolicies: []
-    networkAcls: {
-      defaultAction: 'Allow'
-      bypass: 'AzureServices'
-    }
-  }
-}
-
-// Store storage account connection string in Key Vault
-resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
-  parent: keyVault
-  name: 'storage-connection-string'
-  properties: {
-    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
-  }
-}
-
-// Azure Databricks Workspace
-resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = {
-  name: databricksWorkspaceName
-  location: location
-  tags: commonTags
-  sku: {
-    name: databricksSku
-  }
-  properties: {
-    managedResourceGroupId: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourcePrefix}-databricks-managed-rg-${suffix}'
-    parameters: {
-      customVirtualNetworkId: {
-        value: virtualNetwork.id
-      }
-      customPrivateSubnetName: {
-        value: 'private-subnet'
-      }
-      customPublicSubnetName: {
-        value: 'public-subnet'
-      }
-      enableNoPublicIp: {
-        value: noPublicIp
-      }
-    }
-  }
-}
-
-// Outputs providing important information about deployed resources
-@description('Name of the resource group')
-output resourceGroupName string = resourceGroup().name
-
-@description('Location of the resource group')
-output resourceGroupLocation string = location
-
-@description('Name of the Databricks workspace')
-output databricksWorkspaceName string = databricksWorkspace.name
-
+// Outputs - maintaining compatibility with existing parameter files
 @description('URL of the Databricks workspace')
-output databricksWorkspaceUrl string = databricksWorkspace.properties.workspaceUrl
+output databricksWorkspaceUrl string = databricks.outputs.workspaceUrl
 
 @description('ID of the Databricks workspace')
-output databricksWorkspaceId string = databricksWorkspace.properties.workspaceId
+output databricksWorkspaceId string = databricks.outputs.workspaceId
 
 @description('Name of the storage account')
-output storageAccountName string = storageAccount.name
+output storageAccountName string = storage.outputs.storageAccountName
 
 @description('Primary blob endpoint of the storage account')
-output storageAccountPrimaryEndpoint string = storageAccount.properties.primaryEndpoints.blob
+output storageAccountPrimaryEndpoint string = storage.outputs.storageAccountPrimaryEndpoint
 
 @description('Names of the storage containers')
 output storageContainers object = {
-  raw: rawDataContainer.name
-  processed: processedDataContainer.name
+  raw: storage.outputs.rawDataContainerName
+  processed: storage.outputs.processedDataContainerName
 }
 
 @description('Name of the Key Vault')
-output keyVaultName string = keyVault.name
+output keyVaultName string = security.outputs.keyVaultName
 
 @description('URI of the Key Vault')
-output keyVaultUri string = keyVault.properties.vaultUri
+output keyVaultUri string = security.outputs.keyVaultUri
 
 @description('Name of the virtual network')
-output virtualNetworkName string = virtualNetwork.name
+output virtualNetworkName string = networking.outputs.vnetName
 
 @description('ID of the virtual network')
-output virtualNetworkId string = virtualNetwork.id
+output virtualNetworkId string = networking.outputs.vnetId
 
 @description('Name of the Log Analytics workspace')
-output logAnalyticsWorkspaceName string = logAnalyticsWorkspace.name
+output logAnalyticsWorkspaceName string = security.outputs.logAnalyticsWorkspaceName
 
 @description('ID of the Log Analytics workspace')
-output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
+output logAnalyticsWorkspaceId string = security.outputs.logAnalyticsWorkspaceId
 
 @description('Common resource tags')
 output commonTags object = commonTags

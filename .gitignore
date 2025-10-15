@@ -82,3 +82,7 @@ test-output/
 # Personal notes
 notes.md
 TODO.md
+
+presentation/
+*.md
+!README.md
