@@ -201,9 +201,15 @@ jobs:
         # Get the latest deployment
         deployment_name=$(az deployment group list --resource-group "$rg_name" --query "[0].name" -o tsv)
         
-        # Get outputs
-        outputs=$(az deployment group show --resource-group "$rg_name" --name "$deployment_name" --query "properties.outputs" -o json)
-        echo "deployment-outputs=$outputs" >> $GITHUB_OUTPUT
+        # Get outputs as compact JSON (single line)
+        outputs=$(az deployment group show --resource-group "$rg_name" --name "$deployment_name" --query "properties.outputs" -o json --compact-output)
+        
+        # Store as GitHub output using multiline format
+        {
+          echo "deployment-outputs<<EOF"
+          echo "$outputs"
+          echo "EOF"
+        } >> $GITHUB_OUTPUT
         
         echo "Deployment outputs:"
         echo "$outputs" | jq '.'
