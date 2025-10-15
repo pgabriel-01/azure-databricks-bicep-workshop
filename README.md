@@ -44,23 +44,33 @@ By the end of this workshop, you will be able to:
 │       └── bicep.yml               # CI/CD pipeline
 ├── bicep/
 │   ├── main.bicep                  # Main Bicep template
+│   ├── main-monolithic.bicep      # Original monolithic template
 │   ├── parameters/                 # Parameter files
 │   │   ├── dev.bicepparam         # Development parameters
 │   │   ├── staging.bicepparam     # Staging parameters
 │   │   └── prod.bicepparam        # Production parameters
-│   └── modules/
-│       └── databricks/             # Reusable Databricks module
-│   └── environments/
-│       ├── dev/                   # Development environment
-│       ├── staging/               # Staging environment
-│       └── prod/                  # Production environment
+│   └── modules/                    # Modular Bicep templates
+│       ├── networking.bicep        # Virtual network and subnets
+│       ├── security.bicep          # Key Vault and Log Analytics
+│       ├── storage.bicep           # Storage account and containers
+│       └── databricks.bicep        # Databricks workspace
 ├── databricks/
 │   ├── notebooks/                 # Databricks notebooks
 │   └── jobs/                      # Job configurations
+├── terraform-comparison/          # Equivalent Terraform implementation
+│   ├── main.tf                    # Main Terraform configuration
+│   ├── variables.tf               # Variable definitions
+│   ├── outputs.tf                 # Output definitions
+│   └── modules/                   # Terraform modules
 ├── bicep-comparison/
 │   ├── main.bicep                 # Equivalent Bicep template
 │   └── README.md                  # Terraform vs Bicep comparison
 ├── docs/                          # Workshop documentation
+│   ├── github-setup-guide.md     # Setup instructions
+│   ├── authentication-setup.md   # Azure authentication guide
+│   ├── modular-architecture.md   # Architecture overview
+│   └── troubleshooting.md        # Common issues and solutions
+├── presentation/                  # Workshop presentation materials
 ├── datasets/                      # Sample datasets
 └── scripts/                       # Utility scripts
 ```
