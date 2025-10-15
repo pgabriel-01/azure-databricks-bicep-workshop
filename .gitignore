@@ -4,6 +4,12 @@
 .azure/
 .bicep/
 
+# Compiled ARM templates (generated from Bicep)
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
 # VS Code
 .vscode/settings.json
 .vscode/launch.json
