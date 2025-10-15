@@ -31,4 +31,4 @@ jobs:
     - name: Test Azure CLI
       run: |
         az account show
-        echo "✅ OIDC Authentication successful!"
+        echo "OIDC Authentication successful!"

@@ -1,0 +1,268 @@
+name: 'Bicep Azure Databricks CI/CD'
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'bicep/**'
+      - '.github/workflows/bicep-clean.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'bicep/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      destroy:
+        description: 'Destroy infrastructure'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+env:
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+
+jobs:
+  validate:
+    name: 'Validate Bicep Templates'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Install Bicep
+      run: az bicep install
+
+    - name: Bicep Lint
+      run: |
+        echo "Linting Bicep templates..."
+        az bicep build --file bicep/main.bicep --stdout > /dev/null
+        echo "Bicep linting completed successfully"
+
+    - name: Validate Templates
+      run: |
+        echo "Validating Bicep templates..."
+        for param_file in bicep/parameters/*.bicepparam; do
+          env_name=$(basename "$param_file" .bicepparam)
+          echo "Validating $env_name environment..."
+          
+          # Create temporary resource group for validation
+          temp_rg="bicep-validation-$env_name-$(date +%s)"
+          az group create --name "$temp_rg" --location "East US"
+          
+          # Validate deployment
+          az deployment group validate \
+            --resource-group "$temp_rg" \
+            --template-file bicep/main.bicep \
+            --parameters "$param_file"
+          
+          # Clean up temporary resource group
+          az group delete --name "$temp_rg" --yes --no-wait
+        done
+        echo "All template validations completed successfully"
+
+  security-scan:
+    name: 'Security Scan'
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: 'config'
+        scan-ref: './bicep'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  what-if:
+    name: 'What-If Analysis'
+    runs-on: ubuntu-latest
+    needs: [validate, security-scan]
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.destroy != 'true'
+    strategy:
+      matrix:
+        environment: [dev]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Install Bicep
+      run: az bicep install
+
+    - name: Create Resource Group
+      run: |
+        rg_name="rg-databricks-${{ matrix.environment }}"
+        az group create --name "$rg_name" --location "East US" --tags Environment=${{ matrix.environment }} Project=databricks-workshop
+
+    - name: Bicep What-If Analysis
+      run: |
+        rg_name="rg-databricks-${{ matrix.environment }}"
+        param_file="bicep/parameters/${{ matrix.environment }}.bicepparam"
+        
+        echo "Running what-if analysis for ${{ matrix.environment }} environment..."
+        az deployment group what-if \
+          --resource-group "$rg_name" \
+          --template-file bicep/main.bicep \
+          --parameters "$param_file" \
+          --result-format FullResourcePayloads
+        echo "What-if analysis completed for ${{ matrix.environment }}"
+
+  deploy:
+    name: 'Deploy Infrastructure'
+    runs-on: ubuntu-latest
+    needs: [validate, security-scan, what-if]
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.destroy != 'true') || github.event_name == 'push'
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Install Bicep
+      run: az bicep install
+
+    - name: Deploy Infrastructure
+      run: |
+        environment="${{ github.event.inputs.environment || 'dev' }}"
+        rg_name="rg-databricks-$environment"
+        param_file="bicep/parameters/$environment.bicepparam"
+        
+        echo "Deploying infrastructure to $environment environment..."
+        
+        # Ensure resource group exists
+        az group create --name "$rg_name" --location "East US" --tags Environment=$environment Project=databricks-workshop
+        
+        # Deploy infrastructure
+        az deployment group create \
+          --resource-group "$rg_name" \
+          --template-file bicep/main.bicep \
+          --parameters "$param_file" \
+          --name "databricks-deployment-$(date +%Y%m%d-%H%M%S)"
+        
+        echo "Infrastructure deployment completed successfully"
+
+    - name: Get Deployment Outputs
+      id: outputs
+      run: |
+        environment="${{ github.event.inputs.environment || 'dev' }}"
+        rg_name="rg-databricks-$environment"
+        
+        # Get the latest deployment
+        deployment_name=$(az deployment group list --resource-group "$rg_name" --query "[0].name" -o tsv)
+        
+        # Get outputs
+        outputs=$(az deployment group show --resource-group "$rg_name" --name "$deployment_name" --query "properties.outputs" -o json)
+        echo "deployment-outputs=$outputs" >> $GITHUB_OUTPUT
+        
+        echo "Deployment outputs:"
+        echo "$outputs" | jq '.'
+
+  destroy:
+    name: 'Destroy Infrastructure'
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.destroy == 'true'
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Destroy Infrastructure
+      run: |
+        environment="${{ github.event.inputs.environment }}"
+        rg_name="rg-databricks-$environment"
+        
+        echo "Destroying infrastructure in $environment environment..."
+        echo "This will delete resource group: $rg_name"
+        
+        if az group exists --name "$rg_name"; then
+          az group delete --name "$rg_name" --yes --no-wait
+          echo "Resource group deletion initiated"
+        else
+          echo "Resource group $rg_name does not exist"
+        fi
+
+  notify:
+    name: 'Notify Results'
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [validate, security-scan, what-if, deploy, destroy]
+    
+    steps:
+    - name: Notify Success
+      if: needs.deploy.result == 'success' || needs.destroy.result == 'success'
+      run: |
+        if [ "${{ needs.deploy.result }}" == "success" ]; then
+          echo "Deployment completed successfully!"
+        fi
+        if [ "${{ needs.destroy.result }}" == "success" ]; then
+          echo "Infrastructure destruction completed successfully!"
+        fi
+        
+    - name: Notify Failure
+      if: needs.validate.result == 'failure' || needs.security-scan.result == 'failure' || needs.deploy.result == 'failure' || needs.destroy.result == 'failure'
+      run: |
+        echo "Workflow failed! Please check the logs for details."
+        echo "Failed jobs:"
+        [ "${{ needs.validate.result }}" == "failure" ] && echo "- Validation"
+        [ "${{ needs.security-scan.result }}" == "failure" ] && echo "- Security Scan"
+        [ "${{ needs.deploy.result }}" == "failure" ] && echo "- Deployment"
+        [ "${{ needs.destroy.result }}" == "failure" ] && echo "- Destruction"
