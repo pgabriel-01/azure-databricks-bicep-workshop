@@ -2,7 +2,7 @@
 
 This document compares the implementation of the same Azure Databricks infrastructure using both Terraform and Bicep, highlighting the key differences and best practices for each tool.
 
-## 🔗 **NEW: Complete Working Examples**
+## **NEW: Complete Working Examples**
 
 For fully functional, modular implementations of both tools, see:
 - **Bicep Implementation**: [`../bicep/`](../bicep/) - Modular Bicep templates
