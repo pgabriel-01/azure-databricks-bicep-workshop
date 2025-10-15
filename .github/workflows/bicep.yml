@@ -7,7 +7,7 @@ on:
       - develop
     paths:
       - 'bicep/**'
-      - '.github/workflows/bicep-clean.yml'
+      - '.github/workflows/bicep.yml'
   pull_request:
     branches:
       - main

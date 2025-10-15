@@ -116,7 +116,7 @@ git push -u origin main
 ### Phase 4: Testing Sequence
 
 #### 4.1 Validate GitHub Actions Workflow
-1. **Check workflow file**: `.github/workflows/bicep-clean.yml`
+1. **Check workflow file**: `.github/workflows/bicep.yml`
 2. **Trigger workflow**: Push to main branch should trigger the pipeline
 3. **Monitor execution**: Check Actions tab in GitHub repository
 
