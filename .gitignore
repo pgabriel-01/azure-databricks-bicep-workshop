@@ -83,5 +83,12 @@ test-output/
 notes.md
 TODO.md
 
+# Workshop development files
+BICEP_VS_TERRAFORM_COMPLETE.md
+READY_FOR_TESTING.md
+TESTING_GUIDE.md
+WORKSHOP_REVIEW.md
+.github/copilot-instructions.md
+
 presentation/
 !README.md
