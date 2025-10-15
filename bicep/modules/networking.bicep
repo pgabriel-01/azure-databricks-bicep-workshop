@@ -73,7 +73,92 @@ resource publicNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
   location: location
   tags: tags
   properties: {
-    securityRules: []
+    securityRules: [
+      {
+        name: 'databricks-worker-to-databricks-webapp'
+        properties: {
+          description: 'Required for Databricks worker communication to Databricks webapp'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'AzureDatabricks'
+          destinationPortRanges: ['443', '3306', '8443-8451']
+          access: 'Allow'
+          priority: 100
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-worker-to-sql'
+        properties: {
+          description: 'Required for Databricks SQL connections'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'Sql'
+          destinationPortRange: '3306'
+          access: 'Allow'
+          priority: 101
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-worker-to-storage'
+        properties: {
+          description: 'Required for Databricks worker access to storage'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'Storage'
+          destinationPortRange: '443'
+          access: 'Allow'
+          priority: 102
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-worker-to-eventhub'
+        properties: {
+          description: 'Required for Databricks Event Hub connectivity'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'EventHub'
+          destinationPortRange: '9093'
+          access: 'Allow'
+          priority: 103
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-control-plane-to-worker-ssh'
+        properties: {
+          description: 'Required for Databricks control plane SSH access to workers'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'AzureDatabricks'
+          destinationAddressPrefix: 'VirtualNetwork'
+          destinationPortRange: '22'
+          access: 'Allow'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'databricks-control-plane-to-worker-proxy'
+        properties: {
+          description: 'Required for Databricks control plane proxy access to workers'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'AzureDatabricks'
+          destinationAddressPrefix: 'VirtualNetwork'
+          destinationPortRange: '5557'
+          access: 'Allow'
+          priority: 101
+          direction: 'Inbound'
+        }
+      }
+    ]
   }
 }
 
@@ -83,7 +168,92 @@ resource privateNsg 'Microsoft.Network/networkSecurityGroups@2023-11-01' = {
   location: location
   tags: tags
   properties: {
-    securityRules: []
+    securityRules: [
+      {
+        name: 'databricks-worker-to-databricks-webapp'
+        properties: {
+          description: 'Required for Databricks worker communication to Databricks webapp'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'AzureDatabricks'
+          destinationPortRanges: ['443', '3306', '8443-8451']
+          access: 'Allow'
+          priority: 100
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-worker-to-sql'
+        properties: {
+          description: 'Required for Databricks SQL connections'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'Sql'
+          destinationPortRange: '3306'
+          access: 'Allow'
+          priority: 101
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-worker-to-storage'
+        properties: {
+          description: 'Required for Databricks worker access to storage'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'Storage'
+          destinationPortRange: '443'
+          access: 'Allow'
+          priority: 102
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-worker-to-eventhub'
+        properties: {
+          description: 'Required for Databricks Event Hub connectivity'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'VirtualNetwork'
+          destinationAddressPrefix: 'EventHub'
+          destinationPortRange: '9093'
+          access: 'Allow'
+          priority: 103
+          direction: 'Outbound'
+        }
+      }
+      {
+        name: 'databricks-control-plane-to-worker-ssh'
+        properties: {
+          description: 'Required for Databricks control plane SSH access to workers'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'AzureDatabricks'
+          destinationAddressPrefix: 'VirtualNetwork'
+          destinationPortRange: '22'
+          access: 'Allow'
+          priority: 100
+          direction: 'Inbound'
+        }
+      }
+      {
+        name: 'databricks-control-plane-to-worker-proxy'
+        properties: {
+          description: 'Required for Databricks control plane proxy access to workers'
+          protocol: 'Tcp'
+          sourcePortRange: '*'
+          sourceAddressPrefix: 'AzureDatabricks'
+          destinationAddressPrefix: 'VirtualNetwork'
+          destinationPortRange: '5557'
+          access: 'Allow'
+          priority: 101
+          direction: 'Inbound'
+        }
+      }
+    ]
   }
 }
 

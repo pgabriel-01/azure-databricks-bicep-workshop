@@ -40,7 +40,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
 
 // Key Vault for storing secrets
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: take('${prefix}-kv-${uniqueString(resourceGroup().id)}', 24)
+  name: take('${prefix}kv${uniqueString(resourceGroup().id)}', 24)
   location: location
   tags: tags
   properties: {
