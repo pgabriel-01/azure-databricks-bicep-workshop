@@ -319,14 +319,24 @@ terraform import azurerm_resource_group.main /subscriptions/SUB_ID/resourceGroup
 ## Learning Resources
 
 ### Documentation
-- [Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
-- [Azure Databricks Documentation](https://docs.microsoft.com/en-us/azure/databricks/)
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
 
-### Additional Learning
-- [Terraform Best Practices Guide](docs/terraform-best-practices.md)
-- [Azure Databricks Patterns](docs/databricks-patterns.md)
-- [CI/CD Pipeline Guide](docs/cicd-guide.md)
+#### Workshop Documentation
+- [GitHub Setup Guide](docs/github-setup-guide.md) - Complete repository and CI/CD setup
+- [Authentication Setup](docs/authentication-setup.md) - Azure OIDC configuration
+- [Modern Azure Authentication](docs/modern-azure-authentication.md) - Passwordless authentication
+- [Modular Architecture](docs/modular-architecture.md) - Bicep modular design patterns
+- [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
+- [Validation Checklist](docs/validation-checklist.md) - Pre-delivery validation
+
+#### External References
+- [Azure Databricks Documentation](https://docs.microsoft.com/en-us/azure/databricks/)
+- [Bicep Documentation](https://docs.microsoft.com/azure/azure-resource-manager/bicep/)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
+- [Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
+
+#### Comparison Materials
+- [Terraform vs Bicep Comparison](terraform-comparison/README.md) - Side-by-side feature comparison
+- [Bicep vs Terraform Analysis](BICEP_VS_TERRAFORM_COMPLETE.md) - Detailed technical analysis
 
 ## Contributing
 
