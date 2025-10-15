@@ -1,0 +1,661 @@
+name: 'Bicep Azure Databricks CI/CD'
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'bicep/**'
+      - '.github/workflows/bicep.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'bicep/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      destroy:
+        description: 'Destroy infrastructure'
+        required: false
+        default: false
+        type: boolean
+
+# Grant GITHUB_TOKEN write permissions for security events
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+env:
+  AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+
+jobs:
+  bicep-validate:
+    name: 'Bicep Validate'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Setup Azure CLI
+      uses: azure/CLI@v2
+      with:
+        azcliversion: latest
+
+    - name: Install Bicep
+      run: |
+        az bicep install
+        az bicep upgrade
+
+    - name: Bicep Format Check
+      run: |
+        az bicep format --file main.bicep --stdout > formatted.bicep
+        if ! diff -q main.bicep formatted.bicep >/dev/null; then
+          echo "Bicep files are not properly formatted"
+          echo "Run 'az bicep format --file main.bicep --outfile main.bicep' to fix formatting"
+          exit 1
+        fi
+      working-directory: ./bicep
+
+    - name: Bicep Lint
+      run: |
+        az bicep build --file main.bicep --stdout > /dev/null
+        echo "Bicep linting completed successfully"
+      working-directory: ./bicep
+
+    - name: Bicep Validate Templates
+      run: |
+        for param_file in parameters/*.bicepparam; do
+          env_name=$(basename "$param_file" .bicepparam)
+          echo "Validating $env_name environment..."
+          
+          # Create temporary resource group for validation
+          temp_rg="bicep-validation-$env_name-$(date +%s)"
+          az group create --name "$temp_rg" --location "East US"
+          
+          # Validate deployment
+          az deployment group validate \
+            --resource-group "$temp_rg" \
+            --template-file main.bicep \
+            --parameters "$param_file"
+          
+          # Clean up temporary resource group
+          az group delete --name "$temp_rg" --yes --no-wait
+        done
+      working-directory: ./bicep
+
+  security-scan:
+    name: 'Security Scan'
+    runs-on: ubuntu-latest
+    needs: bicep-validate
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: 'config'
+        scan-ref: './bicep'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  plan:
+    name: 'Bicep Plan'
+    runs-on: ubuntu-latest
+    needs: [bicep-validate, security-scan]
+    if: github.event_name != 'workflow_dispatch' || !inputs.destroy
+    strategy:
+      matrix:
+        environment: [dev, staging, prod]
+        exclude:
+          - environment: ${{ github.ref != 'refs/heads/main' && 'prod' || 'none' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Setup Azure CLI
+      uses: azure/CLI@v2
+      with:
+        azcliversion: latest
+
+    - name: Install Bicep
+      run: |
+        az bicep install
+        az bicep upgrade
+
+    - name: Create Resource Group
+      run: |
+        rg_name="bicep-databricks-${{ matrix.environment }}-rg"
+        az group create --name "$rg_name" --location "East US"
+
+    - name: Bicep What-If Analysis
+      id: whatif
+      run: |
+        rg_name="bicep-databricks-${{ matrix.environment }}-rg"
+        
+        # Run what-if analysis
+        whatif_output=$(az deployment group what-if \
+          --resource-group "$rg_name" \
+          --template-file main.bicep \
+          --parameters "parameters/${{ matrix.environment }}.bicepparam" \
+          --result-format FullResourcePayloads 2>&1)
+        
+        # Save output for comment
+        echo "WHATIF_OUTPUT<<EOF" >> $GITHUB_ENV
+        echo "$whatif_output" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        
+        echo "What-if analysis completed for ${{ matrix.environment }}"
+      working-directory: ./bicep
+
+    - name: Comment PR with What-If Results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const output = `#### Bicep What-If Analysis for ${{ matrix.environment }}
+          
+          <details><summary>Show What-If Results</summary>
+          
+          \`\`\`
+          ${{ env.WHATIF_OUTPUT }}
+          \`\`\`
+          
+          </details>
+          
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+
+  deploy:
+    name: 'Bicep Deploy'
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    strategy:
+      matrix:
+        environment: 
+          - ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'dev' }}
+    environment: ${{ matrix.environment }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        client-id: ${{ env.AZURE_CLIENT_ID }}
+        tenant-id: ${{ env.AZURE_TENANT_ID }}
+        subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Setup Azure CLI
+      uses: azure/CLI@v2
+      with:
+        azcliversion: latest
+
+    - name: Install Bicep
+      run: |
+        az bicep install
+        az bicep upgrade
+
+    - name: Deploy or Destroy Infrastructure
+      id: deploy
+      run: |
+        rg_name="bicep-databricks-${{ matrix.environment }}-rg"
+        
+        if [ "${{ inputs.destroy }}" == "true" ]; then
+          echo "Destroying infrastructure for ${{ matrix.environment }}..."
+          az group delete --name "$rg_name" --yes
+          echo "Infrastructure destroyed successfully"
+        else
+          echo "Deploying infrastructure for ${{ matrix.environment }}..."
+          
+          # Ensure resource group exists
+          az group create --name "$rg_name" --location "East US"
+          
+          # Deploy infrastructure
+          deployment_output=$(az deployment group create \
+            --resource-group "$rg_name" \
+            --template-file main.bicep \
+            --parameters "parameters/${{ matrix.environment }}.bicepparam" \
+            --output json)
+          
+          echo "DEPLOYMENT_OUTPUT<<EOF" >> $GITHUB_ENV
+          echo "$deployment_output" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          
+          echo "Infrastructure deployed successfully"
+        fi
+      working-directory: ./bicep
+
+    - name: Output Deployment Results
+      if: ${{ !inputs.destroy }}
+      run: |
+        echo "Deployment completed successfully!"
+        echo "Workspace URL: $(echo '${{ env.DEPLOYMENT_OUTPUT }}' | jq -r '.properties.outputs.databricksWorkspaceUrl.value')"
+        echo "Resource Group: $(echo '${{ env.DEPLOYMENT_OUTPUT }}' | jq -r '.properties.outputs.resourceGroupName.value')"
+
+    - name: Post-Deployment Validation
+      if: ${{ !inputs.destroy }}
+      run: |
+        rg_name="bicep-databricks-${{ matrix.environment }}-rg"
+        
+        echo "Validating deployed resources..."
+        
+        # Check if Databricks workspace is accessible
+        workspace_name=$(echo '${{ env.DEPLOYMENT_OUTPUT }}' | jq -r '.properties.outputs.databricksWorkspaceName.value')
+        workspace_status=$(az databricks workspace show \
+          --resource-group "$rg_name" \
+          --name "$workspace_name" \
+          --query "provisioningState" -o tsv)
+        
+        if [ "$workspace_status" == "Succeeded" ]; then
+          echo "Databricks workspace is healthy"
+        else
+          echo "Warning: Databricks workspace status is $workspace_status"
+        fi
+        
+        echo "Post-deployment validation completed"
+
+  notify:
+    name: 'Notify Teams'
+    runs-on: ubuntu-latest
+    needs: [deploy]
+    if: always() && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Notify Success
+      if: needs.deploy.result == 'success' && !inputs.destroy
+      run: |
+        echo "Deployment successful! Infrastructure is ready for use."
+        # Add your notification logic here (Teams, Slack, etc.)
+        
+    - name: Notify Destruction
+      if: needs.deploy.result == 'success' && inputs.destroy
+      run: |
+        echo "Infrastructure destruction completed successfully."
+        # Add your notification logic here (Teams, Slack, etc.)
+        
+    - name: Notify Failure
+      if: needs.deploy.result == 'failure'
+      run: |
+        echo "Deployment failed! Please check the logs for details."
+        # Add your notification logic here (Teams, Slack, etc.)
+
+    - name: Run TFLint
+      run: tflint
+      working-directory: ./terraform
+
+  terraform-security-scan:
+    name: 'Security Scan'
+    runs-on: ubuntu-latest
+    needs: terraform-validate
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@0.28.0
+      with:
+        scan-type: 'config'
+        scan-ref: './terraform'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  terraform-plan:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+    needs: [terraform-validate, terraform-security-scan]
+    strategy:
+      matrix:
+        environment: [dev, staging]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Azure Login with OIDC
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Terraform Init
+      run: |
+        terraform init \
+          -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}" \
+          -backend-config="key=${{ matrix.environment }}.tfstate"
+      working-directory: ./terraform
+
+    - name: Terraform Plan
+      run: |
+        terraform plan \
+          -var-file="environments/${{ matrix.environment }}/terraform.tfvars" \
+          -out="${{ matrix.environment }}.tfplan" \
+          -detailed-exitcode
+      working-directory: ./terraform
+      continue-on-error: true
+      id: plan
+
+    - name: Upload Plan Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-plan-${{ matrix.environment }}
+        path: terraform/${{ matrix.environment }}.tfplan
+        retention-days: 30
+
+    - name: Comment Plan on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const output = `#### Terraform Plan for ${{ matrix.environment }}
+          
+          <details><summary>Show Plan</summary>
+          
+          \`\`\`
+          ${{ steps.plan.outputs.stdout }}
+          \`\`\`
+          
+          </details>
+          
+          *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+
+  terraform-apply:
+    name: 'Terraform Apply'
+    runs-on: ubuntu-latest
+    needs: terraform-plan
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    environment: 
+      name: ${{ github.event.inputs.environment || 'dev' }}
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+
+    - name: Azure Login with OIDC
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Download Plan Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: terraform-plan-${{ github.event.inputs.environment || 'dev' }}
+        path: terraform/
+
+    - name: Terraform Init
+      run: |
+        terraform init \
+          -backend-config="resource_group_name=${{ vars.TF_STATE_RESOURCE_GROUP }}" \
+          -backend-config="storage_account_name=${{ vars.TF_STATE_STORAGE_ACCOUNT }}" \
+          -backend-config="container_name=${{ vars.TF_STATE_CONTAINER }}" \
+          -backend-config="key=${{ github.event.inputs.environment || 'dev' }}.tfstate"
+      working-directory: ./terraform
+
+    - name: Terraform Apply
+      if: github.event.inputs.destroy != 'true'
+      run: terraform apply -auto-approve "${{ github.event.inputs.environment || 'dev' }}.tfplan"
+      working-directory: ./terraform
+
+    - name: Terraform Destroy
+      if: github.event.inputs.destroy == 'true'
+      run: |
+        terraform destroy -auto-approve \
+          -var-file="environments/${{ github.event.inputs.environment || 'dev' }}/terraform.tfvars"
+      working-directory: ./terraform
+
+    - name: Upload Terraform Outputs
+      if: github.event.inputs.destroy != 'true'
+      run: |
+        terraform output -json > terraform-outputs.json
+        echo "TERRAFORM_OUTPUTS<<EOF" >> $GITHUB_ENV
+        cat terraform-outputs.json >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+      working-directory: ./terraform
+
+    - name: Comment Apply Results on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const output = `#### Terraform Apply Results for ${{ github.event.inputs.environment || 'dev' }}
+          
+          Infrastructure has been successfully deployed!
+          
+          **Key Resources:**
+          - Databricks Workspace: ${{ steps.outputs.databricks_workspace_url }}
+          - Resource Group: ${{ steps.outputs.resource_group_name }}
+          - Storage Account: ${{ steps.outputs.storage_account_name }}
+          
+          *Action: \`${{ github.event_name }}\`, Workflow: \`${{ github.workflow }}\`*`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })
+
+  databricks-deploy:
+    name: 'Deploy Databricks Artifacts'
+    runs-on: ubuntu-latest
+    needs: terraform-apply
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install Databricks CLI
+      run: |
+        pip install databricks-cli
+        pip install databricks-connect
+
+    - name: Configure Databricks CLI
+      run: |
+        echo "${{ secrets.DATABRICKS_HOST }}" > ~/.databricks-host
+        echo "${{ secrets.DATABRICKS_TOKEN }}" > ~/.databricks-token
+        databricks configure --token <<EOF
+        ${{ secrets.DATABRICKS_HOST }}
+        ${{ secrets.DATABRICKS_TOKEN }}
+        EOF
+
+    - name: Upload Notebooks
+      run: |
+        databricks workspace import-dir \
+          databricks/notebooks \
+          /Shared/workshop/notebooks \
+          --language PYTHON \
+          --overwrite
+
+    - name: Upload Jobs Configuration
+      run: |
+        # Create sample job configuration
+        cat > job-config.json <<EOF
+        {
+          "name": "NYC Taxi Data Pipeline",
+          "notebook_task": {
+            "notebook_path": "/Shared/workshop/notebooks/01_data_ingestion",
+            "source": "WORKSPACE"
+          },
+          "new_cluster": {
+            "spark_version": "13.3.x-scala2.12",
+            "node_type_id": "Standard_DS3_v2",
+            "num_workers": 2,
+            "spark_conf": {
+              "spark.sql.adaptive.enabled": "true",
+              "spark.sql.adaptive.coalescePartitions.enabled": "true"
+            }
+          },
+          "timeout_seconds": 3600,
+          "max_retries": 2,
+          "email_notifications": {
+            "on_failure": ["${{ secrets.NOTIFICATION_EMAIL }}"]
+          }
+        }
+        EOF
+        
+        # Create or update job
+        JOB_ID=$(databricks jobs list --output JSON | jq -r '.jobs[] | select(.settings.name=="NYC Taxi Data Pipeline") | .job_id')
+        if [ "$JOB_ID" != "null" ] && [ -n "$JOB_ID" ]; then
+          echo "Updating existing job $JOB_ID"
+          databricks jobs reset --job-id $JOB_ID --json-file job-config.json
+        else
+          echo "Creating new job"
+          databricks jobs create --json-file job-config.json
+        fi
+
+    - name: Run Data Quality Tests
+      run: |
+        # Run basic data quality notebook
+        RUN_ID=$(databricks runs submit --json '{
+          "run_name": "Data Quality Check - $(date +%Y%m%d_%H%M%S)",
+          "notebook_task": {
+            "notebook_path": "/Shared/workshop/notebooks/01_data_ingestion",
+            "source": "WORKSPACE"
+          },
+          "new_cluster": {
+            "spark_version": "13.3.x-scala2.12",
+            "node_type_id": "Standard_DS3_v2",
+            "num_workers": 1
+          }
+        }' | jq -r .run_id)
+        
+        echo "Started run $RUN_ID"
+        
+        # Wait for completion (timeout after 20 minutes)
+        for i in {1..40}; do
+          STATUS=$(databricks runs get --run-id $RUN_ID | jq -r .state.life_cycle_state)
+          if [ "$STATUS" = "TERMINATED" ]; then
+            RESULT=$(databricks runs get --run-id $RUN_ID | jq -r .state.result_state)
+            if [ "$RESULT" = "SUCCESS" ]; then
+              echo "Data quality tests passed"
+              exit 0
+            else
+              echo "Data quality tests failed"
+              exit 1
+            fi
+          fi
+          echo "Waiting for run to complete... (Status: $STATUS)"
+          sleep 30
+        done
+        
+        echo "Timeout waiting for run completion"
+        exit 1
+
+  notify-teams:
+    name: 'Notify Teams'
+    runs-on: ubuntu-latest
+    needs: [terraform-apply, databricks-deploy]
+    if: always()
+    
+    steps:
+    - name: Notify Success
+      if: needs.terraform-apply.result == 'success' && needs.databricks-deploy.result == 'success'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        text: |
+          **Terraform Azure Databricks Deployment Successful**
+          
+          **Environment:** ${{ github.event.inputs.environment || 'dev' }}
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
+          **Actor:** ${{ github.actor }}
+          
+          Infrastructure and Databricks artifacts have been successfully deployed!
+
+    - name: Notify Failure
+      if: needs.terraform-apply.result == 'failure' || needs.databricks-deploy.result == 'failure'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        webhook_url: ${{ secrets.TEAMS_WEBHOOK_URL }}
+        text: |
+          **Terraform Azure Databricks Deployment Failed**
+          
+          **Environment:** ${{ github.event.inputs.environment || 'dev' }}
+          **Branch:** ${{ github.ref_name }}
+          **Commit:** ${{ github.sha }}
+          **Actor:** ${{ github.actor }}
+          
+          Please check the workflow logs for details.
