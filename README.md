@@ -127,7 +127,7 @@ After setting up OIDC, verify your GitHub repository has these variables:
 **Option 2: Manual Deployment**
 ```bash
 # Deploy to development environment
-az group create --name "rg-databricks-dev" --location "East US"
+az group create --name "rg-databricks-dev" --location "East US 2"
 
 az deployment group create \
   --resource-group "rg-databricks-dev" \

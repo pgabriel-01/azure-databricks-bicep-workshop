@@ -4,7 +4,7 @@
 using '../main.bicep'
 
 param environment = 'prod'
-param location = 'East US'
+param location = 'East US 2'
 param projectName = 'databricks-workshop'
 param owner = 'production-team'
 param costCenter = 'production'
