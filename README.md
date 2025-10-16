@@ -2,6 +2,8 @@
 
 A comprehensive workshop demonstrating Infrastructure as Code best practices with Azure Bicep and Databricks, featuring CI/CD pipelines, security implementations, and a complete comparison with Terraform.
 
+> **Workshop Ready**: Version 1.1.5+ features enhanced global naming for reliable multi-participant deployments and cross-subscription compatibility.
+
 ## Workshop Objectives
 
 By the end of this workshop, you will be able to:
@@ -243,13 +245,16 @@ The dataset includes:
 ## Bicep Best Practices Demonstrated
 
 ### Project Organization
-- Consistent naming conventions
+- **Global Naming Strategy**: Enhanced uniqueness using subscription + resource group + deployment identifiers
+- **Workshop-Safe Naming**: Prevents conflicts in multi-participant environments
+- **Consistent naming conventions** across all Azure resources
 - Environment-specific parameter files
 - Reusable modules
 - Proper tagging strategy
 
 ### Modular Architecture
 - Separate modules for networking, security, storage, and Databricks
+- **Cross-subscription reliability** with enhanced resource naming
 - Parameter validation with decorators
 - Output management
 - Resource dependencies
@@ -339,6 +344,9 @@ az deployment group show --resource-group "rg-databricks-dev" --name "main"
 ### Key Features
 - **OIDC Authentication**: Passwordless authentication with Azure
 - **Multi-Environment**: Support for dev, staging, and production
+- **Enhanced Global Naming**: Prevents resource conflicts in workshop scenarios
+- **Workshop-Safe Deployment**: Multiple participants can deploy simultaneously
+- **Cross-Subscription Reliability**: Works across different Azure subscriptions
 - **Security Scanning**: Automated vulnerability detection
 - **Cost Control**: Easy resource cleanup with destroy functionality
 

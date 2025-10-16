@@ -9,7 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No unreleased changes*
 
-## [1.1.3] - 2024-10-15
+## [1.1.5] - 2025-10-15
+
+### Fixed
+- **Critical Naming Issue**: Implemented extremely unique naming for storage account and Key Vault
+- **Consistency**: Applied same enhanced uniqueness strategy across all globally named resources
+- **Workshop Reliability**: Prevents naming conflicts in multi-participant scenarios
+- **Cross-Subscription**: Ensures reliability across different Azure subscriptions and regions
+
+### Changed
+- **Storage Account Naming**: Optimized with shorter base name (8 chars) for longer unique suffix
+- **Key Vault Naming**: Updated from `uniqueString(resourceGroup().id)` to full uniqueness strategy
+- **Uniqueness Strategy**: Both modules now use `subscription().subscriptionId + resourceGroup().id + deployment().name`
+- **Prefix Handling**: Consistent hyphen removal and length optimization
+
+### Enhanced
+- **Global Uniqueness**: Maximum protection against naming conflicts
+- **Workshop Safety**: Multiple participants can deploy simultaneously without issues
+- **Enterprise Ready**: Reliable deployment across different organizational contexts
+
+## [1.1.4] - 2025-10-15
 
 ### Changed
 - **Databricks Naming**: Optimized workspace naming for better consistency
@@ -22,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - All functional capabilities preserved
 - No breaking changes to deployment process
 
-## [1.1.2] - 2024-10-15
+## [1.1.2] - 2025-10-15
 
 ### Removed
 - **Redundant Files**: Removed `bicep-comparison/` directory (superseded by `BICEP_VS_TERRAFORM_COMPLETE.md`)
@@ -38,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Broken References**: Fixed outdated links and directory references
 - **Project Structure**: Updated documentation to match actual file organization
 
-## [1.1.1] - 2024-10-15
+## [1.1.1] - 2025-10-15
 
 ### Fixed
 - **Storage Account Naming**: Improved global uniqueness to prevent workshop conflicts
@@ -51,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fallback Naming**: Updated from `dataworkshop` to `workshop` for consistency
 - **Comments**: Added explanatory comments about uniqueness strategy
 
-## [1.1.0] - 2024-10-15
+## [1.1.0] - 2025-10-15
 
 ### Added
 - **Complete Terraform Implementation**: Full equivalent infrastructure in `terraform-comparison/`
@@ -70,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Comparison Matrix**: Objective feature analysis
 - **Migration Scenarios**: When to choose which approach
 
-## [1.0.3] - 2024-10-15
+## [1.0.3] - 2025-10-15
 
 ### Changed
 - **Documentation Polish**: Improved formatting for professional corporate presentation
@@ -83,7 +102,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Section structure and hierarchy unchanged
 - Workshop delivery quality maintained
 
-## [1.0.2] - 2024-10-15
+## [1.0.2] - 2025-10-15
 
 ### Fixed
 - **Repository Clone URL**: Corrected to actual `pgabriel-01/azure-databricks-bicep-workshop`
@@ -104,7 +123,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD Documentation**: Accurate reflection of actual Bicep pipeline capabilities
 - **User Experience**: Clear distinction between automated and manual approaches
 
-## [1.0.1] - 2024-10-15
+## [1.0.1] - 2025-10-15
 
 ### Tested
 - **Deploy Functionality**: Successfully tested complete infrastructure deployment
@@ -116,7 +135,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated CHANGELOG.md with proper release documentation
 - Confirmed all features work as documented
 
-## [1.0.0] - 2024-10-15
+## [1.0.0] - 2025-10-15
 
 ### Added
 - Comprehensive troubleshooting guide (`docs/troubleshooting.md`)
