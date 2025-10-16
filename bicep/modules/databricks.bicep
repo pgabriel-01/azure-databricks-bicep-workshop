@@ -27,11 +27,11 @@ param privateSubnetName string
 param tags object = {}
 
 // Variables
-var managedResourceGroupName = '${prefix}-databricks-managed-rg'
+var managedResourceGroupName = '${prefix}-managed-rg'
 
 // Azure Databricks Workspace
 resource databricksWorkspace 'Microsoft.Databricks/workspaces@2024-05-01' = {
-  name: '${prefix}-databricks'
+  name: '${prefix}-db'
   location: location
   tags: tags
   sku: {
