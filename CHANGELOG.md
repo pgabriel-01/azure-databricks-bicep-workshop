@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No unreleased changes*
 
+## [1.0.2] - 2024-10-15
+
+### Fixed
+- **Repository Clone URL**: Corrected to actual `pgabriel-01/azure-databricks-bicep-workshop`
+- **Resource Group Names**: Fixed to correct `rg-databricks-dev` naming pattern
+- **Azure CLI Commands**: Updated deployment syntax to working commands
+- **Content Focus**: Replaced inappropriate Terraform content with Bicep-specific guidance
+- **Setup Instructions**: Removed references to non-existent setup scripts
+
+### Added
+- **Production Ready Badge**: Clear indication of tested, validated workshop status
+- **Comprehensive Cleanup Section**: Detailed destroy instructions with cost warnings
+- **GitHub Actions Guidance**: Recommended workflow usage for deploy and destroy
+- **Cost Management Warnings**: Prominent cleanup reminders to prevent ongoing charges
+
+### Improved
+- **Quick Start Flow**: Now emphasizes tested GitHub Actions approach
+- **Workshop Modules**: Updated to reflect destroy functionality testing
+- **CI/CD Documentation**: Accurate reflection of actual Bicep pipeline capabilities
+- **User Experience**: Clear distinction between automated and manual approaches
+
 ## [1.0.1] - 2024-10-15
 
 ### Tested
