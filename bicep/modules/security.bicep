@@ -1,5 +1,5 @@
 // Security Module - Key Vault, Log Analytics for Databricks
-// This module creates security and monitoring infrastructure
+// This module creates security and monitoring infrastructure with globally unique naming
 
 @description('Resource prefix for naming')
 param prefix string
@@ -22,6 +22,9 @@ param environment string
 @description('Resource tags')
 param tags object = {}
 
+// Variables for globally unique naming
+var uniqueIdentifier = uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name)
+
 // Log Analytics Workspace for monitoring
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   name: '${prefix}-law'
@@ -40,7 +43,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
 
 // Key Vault for storing secrets
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: take('${prefix}kv${uniqueString(resourceGroup().id)}', 24)
+  name: take('${replace(prefix, '-', '')}kv${uniqueIdentifier}', 24)
   location: location
   tags: tags
   properties: {

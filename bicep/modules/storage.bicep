@@ -23,7 +23,7 @@ param keyVaultId string
 param tags object = {}
 
 // Variables for storage account naming - ensuring global uniqueness
-var storageAccountNameBase = replace(prefix, '-', '')
+var storageAccountNameBase = take(replace(prefix, '-', ''), 8) // Limit base name to 8 chars
 // Use subscription ID + resource group ID + timestamp for better global uniqueness
 var uniqueIdentifier = uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name)
 var storageAccountName = take('${storageAccountNameBase}sa${uniqueIdentifier}', 24)
