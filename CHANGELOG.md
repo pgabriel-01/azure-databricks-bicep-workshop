@@ -9,6 +9,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No unreleased changes*
 
+## [1.1.3] - 2024-10-15
+
+### Changed
+- **Databricks Naming**: Optimized workspace naming for better consistency
+- **Resource Names**: Shortened managed resource group name from `databricks-managed-rg` to `managed-rg`
+- **Workspace Naming**: Simplified workspace name from `databricks` suffix to `db` suffix
+- **Portal Navigation**: Improved Azure portal navigation with more concise resource names
+
+### Maintained
+- Full compatibility with existing parameter files
+- All functional capabilities preserved
+- No breaking changes to deployment process
+
+## [1.1.2] - 2024-10-15
+
+### Removed
+- **Redundant Files**: Removed `bicep-comparison/` directory (superseded by `BICEP_VS_TERRAFORM_COMPLETE.md`)
+- **Debug Artifacts**: Cleaned up OIDC authentication timestamp artifacts
+- **Outdated References**: Removed references to non-existent Slack workspace
+
+### Changed
+- **README Structure**: Updated project structure to reflect current organization
+- **Documentation**: Streamlined learning resources section for clarity
+- **Repository Organization**: Cleaner structure for professional workshop delivery
+
+### Fixed
+- **Broken References**: Fixed outdated links and directory references
+- **Project Structure**: Updated documentation to match actual file organization
+
+## [1.1.1] - 2024-10-15
+
+### Fixed
+- **Storage Account Naming**: Improved global uniqueness to prevent workshop conflicts
+- **Naming Strategy**: Use subscription ID + resource group ID + deployment name for uniqueness
+- **Workshop Safety**: Prevents naming conflicts when multiple participants deploy simultaneously
+- **Cross-Subscription**: Works reliably across different Azure subscriptions
+
+### Changed
+- **Unique Identifier**: Enhanced from `uniqueString(resourceGroup().id)` to `uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name)`
+- **Fallback Naming**: Updated from `dataworkshop` to `workshop` for consistency
+- **Comments**: Added explanatory comments about uniqueness strategy
+
+## [1.1.0] - 2024-10-15
+
+### Added
+- **Complete Terraform Implementation**: Full equivalent infrastructure in `terraform-comparison/`
+- **Bicep vs Terraform Comparison**: Comprehensive analysis in `BICEP_VS_TERRAFORM_COMPLETE.md`
+- **Feature Matrix**: Detailed comparison of Bicep vs Terraform capabilities
+- **Working Examples**: Deployable code for both Bicep and Terraform approaches
+- **Decision Framework**: Practical guidance for choosing between tools
+
+### Enhanced
+- **Workshop Educational Value**: Now provides hands-on comparison between tools
+- **Real-World Relevance**: Industry-standard approach to tool evaluation
+- **Practical Experience**: Participants can deploy with both Bicep and Terraform
+
+### Documentation
+- **Deployment Instructions**: Complete setup guides for both tools
+- **Comparison Matrix**: Objective feature analysis
+- **Migration Scenarios**: When to choose which approach
+
 ## [1.0.3] - 2024-10-15
 
 ### Changed
