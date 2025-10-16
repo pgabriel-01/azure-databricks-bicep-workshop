@@ -1,8 +1,6 @@
-# Bicep Azure Databricks Workshop
+# Azure Databricks Bicep Workshop
 
-A comprehensive workshop demonstrating Infrastructure as Code best practices with Bicep, Azure Databricks, and CI/CD pipelines using GitHub Actions.
-
-> **Production Ready**: This workshop has been fully tested with working deploy and destroy functionality. Version v1.0.1 includes validated CI/CD pipelines and comprehensive documentation.
+A comprehensive workshop demonstrating Infrastructure as Code best practices with Azure Bicep and Databricks, featuring CI/CD pipelines, security implementations, and a complete comparison with Terraform.
 
 ## Workshop Objectives
 
@@ -43,38 +41,35 @@ By the end of this workshop, you will be able to:
 .
 ├── .github/
 │   └── workflows/
-│       └── bicep.yml               # CI/CD pipeline
+│       └── bicep.yml               # CI/CD pipeline with deploy/destroy
 ├── bicep/
-│   ├── main.bicep                  # Main Bicep template
-│   ├── main-monolithic.bicep      # Original monolithic template
-│   ├── parameters/                 # Parameter files
+│   ├── main.bicep                  # Main modular Bicep template
+│   ├── parameters/                 # Environment-specific parameter files
 │   │   ├── dev.bicepparam         # Development parameters
 │   │   ├── staging.bicepparam     # Staging parameters
 │   │   └── prod.bicepparam        # Production parameters
 │   └── modules/                    # Modular Bicep templates
 │       ├── networking.bicep        # Virtual network and subnets
 │       ├── security.bicep          # Key Vault and Log Analytics
-│       ├── storage.bicep           # Storage account and containers
-│       └── databricks.bicep        # Databricks workspace
-├── databricks/
-│   ├── notebooks/                 # Databricks notebooks
-│   └── jobs/                      # Job configurations
+│       ├── storage.bicep           # Storage account with Data Lake Gen2
+│       └── databricks.bicep        # Databricks workspace with VNet injection
 ├── terraform-comparison/          # Equivalent Terraform implementation
 │   ├── main.tf                    # Main Terraform configuration
 │   ├── variables.tf               # Variable definitions
 │   ├── outputs.tf                 # Output definitions
-│   └── modules/                   # Terraform modules
-├── bicep-comparison/
-│   ├── main.bicep                 # Equivalent Bicep template
-│   └── README.md                  # Terraform vs Bicep comparison
-├── docs/                          # Workshop documentation
-│   ├── github-setup-guide.md     # Setup instructions
-│   ├── authentication-setup.md   # Azure authentication guide
+│   └── modules/                   # Terraform modules (networking, security, etc.)
+├── databricks/
+│   ├── notebooks/                 # Sample Databricks notebooks
+│   └── jobs/                      # Job configurations
+├── docs/                          # Comprehensive workshop documentation
+│   ├── github-setup-guide.md     # Complete setup instructions
+│   ├── authentication-setup.md   # Azure OIDC authentication guide
 │   ├── modular-architecture.md   # Architecture overview
-│   └── troubleshooting.md        # Common issues and solutions
-├── presentation/                  # Workshop presentation materials
-├── datasets/                      # Sample datasets
-└── scripts/                       # Utility scripts
+│   ├── troubleshooting.md        # Common issues and solutions
+│   └── validation-checklist.md   # Pre-workshop validation
+├── datasets/                      # Sample datasets for workshop
+├── scripts/                       # Utility scripts
+└── BICEP_VS_TERRAFORM_COMPLETE.md # Comprehensive tool comparison
 ```
 
 ## Quick Start
@@ -347,27 +342,23 @@ az deployment group show --resource-group "rg-databricks-dev" --name "main"
 - **Security Scanning**: Automated vulnerability detection
 - **Cost Control**: Easy resource cleanup with destroy functionality
 
-## Learning Resources
-
-### Documentation
+### Learning Resources
 
 #### Workshop Documentation
 - [GitHub Setup Guide](docs/github-setup-guide.md) - Complete repository and CI/CD setup
 - [Authentication Setup](docs/authentication-setup.md) - Azure OIDC configuration
-- [Modern Azure Authentication](docs/modern-azure-authentication.md) - Passwordless authentication
 - [Modular Architecture](docs/modular-architecture.md) - Bicep modular design patterns
 - [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and solutions
 - [Validation Checklist](docs/validation-checklist.md) - Pre-delivery validation
+
+#### Tool Comparison
+- [Complete Bicep vs Terraform Analysis](BICEP_VS_TERRAFORM_COMPLETE.md) - Comprehensive comparison with working examples
 
 #### External References
 - [Azure Databricks Documentation](https://docs.microsoft.com/en-us/azure/databricks/)
 - [Bicep Documentation](https://docs.microsoft.com/azure/azure-resource-manager/bicep/)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [Terraform Azure Provider](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs)
-
-#### Comparison Materials
-- [Terraform vs Bicep Comparison](terraform-comparison/README.md) - Side-by-side feature comparison
-- [Bicep vs Terraform Analysis](BICEP_VS_TERRAFORM_COMPLETE.md) - Detailed technical analysis
 
 ## Contributing
 
@@ -403,6 +394,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 For workshop-related questions:
 - Create an issue in this repository
 - Contact the workshop facilitators
-- Join our Slack workspace: [workspace-link]
 
-**Happy Learning!**# OIDC Authentication configured successfully on 10/15/2025 17:31:43
+**Happy Learning!**
