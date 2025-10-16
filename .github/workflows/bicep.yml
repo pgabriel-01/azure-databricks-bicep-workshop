@@ -74,7 +74,9 @@ jobs:
           
           # Create temporary resource group for validation
           temp_rg="bicep-validation-$env_name-$(date +%s)"
-          az group create --name "$temp_rg" --location "East US"
+          # Extract location from parameter file
+          location=$(az bicep build-params --file "$param_file" --stdout | jq -r '.parameters.location.value // "East US"')
+          az group create --name "$temp_rg" --location "$location"
           
           # Validate deployment
           az deployment group validate \
