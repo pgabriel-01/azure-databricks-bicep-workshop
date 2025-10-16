@@ -1,5 +1,6 @@
 // Storage Module - Data Lake Storage for Databricks
 // This module creates storage infrastructure for data processing
+// Uses globally unique naming to prevent conflicts in workshop scenarios
 
 @description('Resource prefix for naming')
 param prefix string
@@ -21,13 +22,15 @@ param keyVaultId string
 @description('Resource tags')
 param tags object = {}
 
-// Variables for storage account naming
+// Variables for storage account naming - ensuring global uniqueness
 var storageAccountNameBase = replace(prefix, '-', '')
-var storageAccountName = take('${storageAccountNameBase}sa${uniqueString(resourceGroup().id)}', 24)
+// Use subscription ID + resource group ID + timestamp for better global uniqueness
+var uniqueIdentifier = uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name)
+var storageAccountName = take('${storageAccountNameBase}sa${uniqueIdentifier}', 24)
 
 // Storage Account with Data Lake Gen2 capabilities
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
-  name: length(storageAccountName) >= 3 ? storageAccountName : 'dataworkshop${uniqueString(resourceGroup().id)}'
+  name: length(storageAccountName) >= 3 ? storageAccountName : 'workshop${uniqueIdentifier}'
   location: location
   tags: tags
   sku: {
