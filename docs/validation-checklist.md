@@ -58,7 +58,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 🧱 Bicep Template Validation
+## Bicep Template Validation
 
 ### Template Syntax and Structure
 - [ ] **Compilation**: All `.bicep` files compile without errors
