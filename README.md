@@ -2,7 +2,7 @@
 
 A comprehensive workshop demonstrating Infrastructure as Code best practices with Bicep, Azure Databricks, and CI/CD pipelines using GitHub Actions.
 
-> ✅ **Production Ready**: This workshop has been fully tested with working deploy and destroy functionality. Version v1.0.1 includes validated CI/CD pipelines and comprehensive documentation.
+> **Production Ready**: This workshop has been fully tested with working deploy and destroy functionality. Version v1.0.1 includes validated CI/CD pipelines and comprehensive documentation.
 
 ## Workshop Objectives
 
@@ -157,14 +157,14 @@ az deployment group show \
 
 ### 6. Clean Up Resources
 
-**⚠️ Important: Always clean up resources after the workshop to avoid ongoing costs!**
+**Important: Always clean up resources after the workshop to avoid ongoing costs!**
 
 **Option 1: Using GitHub Actions (Recommended)**
 1. Go to your repository's Actions tab
 2. Select "Bicep Azure Databricks CI/CD" workflow
 3. Click "Run workflow"
 4. Choose the same environment you deployed to
-5. **Check "Destroy infrastructure"** ✅
+5. **Check "Destroy infrastructure"**
 6. Click "Run workflow"
 
 **Option 2: Manual Cleanup**

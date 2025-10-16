@@ -2,7 +2,7 @@
 
 This checklist ensures your Azure Databricks Bicep Workshop environment is properly configured and ready for delivery. Use this as a final validation before conducting the workshop.
 
-## 🎯 Pre-Workshop Validation (Complete this first)
+## Pre-Workshop Validation (Complete this first)
 
 ### Azure Environment Setup
 - [ ] **Azure CLI Installed**: `az --version` shows 2.50+ 
@@ -27,7 +27,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 🏗️ Infrastructure Validation
+## Infrastructure Validation
 
 ### Core Infrastructure Components
 - [ ] **Resource Group**: Deploys successfully with correct naming
@@ -83,7 +83,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 🚀 CI/CD Pipeline Validation
+## CI/CD Pipeline Validation
 
 ### GitHub Actions Workflow
 - [ ] **Workflow Triggers**: Runs on push to main and PR creation
@@ -108,7 +108,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 🎓 Workshop Content Validation
+## Workshop Content Validation
 
 ### Documentation Quality
 - [ ] **README Accuracy**: All instructions are current and correct
@@ -133,7 +133,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 📊 Azure Databricks Validation
+## Azure Databricks Validation
 
 ### Workspace Deployment
 - [ ] **Workspace Creation**: Databricks workspace deploys successfully
@@ -158,7 +158,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 🔍 Final Pre-Delivery Checklist
+## Final Pre-Delivery Checklist
 
 ### Technical Verification
 - [ ] **End-to-End Test**: Complete deployment from scratch works
@@ -183,7 +183,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 📋 Validation Completion
+## Validation Completion
 
 **Date Validated**: ________________
 
@@ -210,7 +210,7 @@ This checklist ensures your Azure Databricks Bicep Workshop environment is prope
 
 ---
 
-## 🚨 Common Validation Failures
+## Common Validation Failures
 
 ### Quick Resolution Guide
 1. **Azure CLI Issues**: Update to latest version, re-login to Azure
