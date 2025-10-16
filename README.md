@@ -2,6 +2,8 @@
 
 A comprehensive workshop demonstrating Infrastructure as Code best practices with Bicep, Azure Databricks, and CI/CD pipelines using GitHub Actions.
 
+> ✅ **Production Ready**: This workshop has been fully tested with working deploy and destroy functionality. Version v1.0.1 includes validated CI/CD pipelines and comprehensive documentation.
+
 ## Workshop Objectives
 
 By the end of this workshop, you will be able to:
@@ -80,70 +82,64 @@ By the end of this workshop, you will be able to:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/bicep-databricks-workshop.git
-cd bicep-databricks-workshop
+git clone https://github.com/pgabriel-01/azure-databricks-bicep-workshop.git
+cd azure-databricks-bicep-workshop
 ```
 
-### 2. Set Up Azure OIDC Authentication
+### 2. Set Up Azure Authentication
 
-**For Windows (PowerShell):**
-```powershell
-# Login to Azure and GitHub
-az login
-gh auth login
+Follow the comprehensive [GitHub Setup Guide](docs/github-setup-guide.md) to configure Azure OIDC authentication for passwordless CI/CD.
 
-# Run OIDC setup script
-.\scripts\setup-oidc.ps1
-```
+**Quick Setup Summary:**
+1. Create Azure App Registration with federated credentials
+2. Configure GitHub repository variables:
+   - `AZURE_CLIENT_ID`
+   - `AZURE_TENANT_ID` 
+   - `AZURE_SUBSCRIPTION_ID`
+3. Test authentication with GitHub Actions
 
-**For Linux/macOS (Bash):**
+**Manual Alternative:**
 ```bash
-# Login to Azure and GitHub
+# Login to Azure
 az login
-gh auth login
 
-# Run OIDC setup script
-./scripts/setup-oidc.sh
+# Get subscription info
+az account show
+
+# Set up federated identity credentials (see setup guide for details)
+az ad app create --display-name "Databricks-Workshop-OIDC"
 ```
 
-The script will automatically:
-- Create Azure App Registration with OIDC federation
-- Set up GitHub repository variables
-- Configure federated identity credentials
-- Provide you with the configuration details
+### 3. Verify Authentication Setup
 
-### 3. Verify OIDC Setup
-
-After running the setup script, verify your GitHub repository has these variables:
+After setting up OIDC, verify your GitHub repository has these variables:
 - `AZURE_CLIENT_ID`
 - `AZURE_TENANT_ID` 
 - `AZURE_SUBSCRIPTION_ID`
-- `BICEP_STATE_RESOURCE_GROUP`
-- `BICEP_STATE_STORAGE_ACCOUNT`
-- `BICEP_STATE_CONTAINER`
-
-The Bicep deployment will use these variables for authentication and state management.
-    storage_account_name = "terraformstatesa"
-    container_name       = "tfstate"
-    key                  = "databricks-workshop.tfstate"
-  }
-}
-```
 
 ### 4. Deploy Infrastructure
 
-```bash
-cd bicep
+**Option 1: Using GitHub Actions (Recommended)**
+1. Go to your repository's Actions tab
+2. Select "Bicep Azure Databricks CI/CD" workflow
+3. Click "Run workflow"
+4. Choose environment (dev/staging/prod)
+5. Leave "Destroy infrastructure" unchecked
+6. Click "Run workflow"
 
-# Deploy infrastructure to development environment
+**Option 2: Manual Deployment**
+```bash
+# Deploy to development environment
+az group create --name "rg-databricks-dev" --location "East US"
+
 az deployment group create \
-  --resource-group "bicep-databricks-dev-rg" \
-  --template-file main.bicep \
-  --parameters dev.bicepparam
+  --resource-group "rg-databricks-dev" \
+  --template-file bicep/main.bicep \
+  --parameters bicep/parameters/dev.bicepparam
 
 # Get deployment outputs
 az deployment group show \
-  --resource-group "bicep-databricks-dev-rg" \
+  --resource-group "rg-databricks-dev" \
   --name "main" \
   --query properties.outputs
 ```
@@ -154,10 +150,33 @@ After deployment, get the workspace URL from the outputs:
 
 ```bash
 az deployment group show \
-  --resource-group "bicep-databricks-dev-rg" \
+  --resource-group "rg-databricks-dev" \
   --name "main" \
   --query properties.outputs.databricksWorkspaceUrl.value
 ```
+
+### 6. Clean Up Resources
+
+**⚠️ Important: Always clean up resources after the workshop to avoid ongoing costs!**
+
+**Option 1: Using GitHub Actions (Recommended)**
+1. Go to your repository's Actions tab
+2. Select "Bicep Azure Databricks CI/CD" workflow
+3. Click "Run workflow"
+4. Choose the same environment you deployed to
+5. **Check "Destroy infrastructure"** ✅
+6. Click "Run workflow"
+
+**Option 2: Manual Cleanup**
+```bash
+# Delete the entire resource group (removes all resources)
+az group delete --name "rg-databricks-dev" --yes
+
+# Verify deletion
+az group exists --name "rg-databricks-dev"
+```
+
+For detailed cleanup instructions, see the [Troubleshooting Guide](docs/troubleshooting.md).
 
 ## Workshop Modules
 
@@ -189,8 +208,8 @@ az deployment group show \
 ### Module 5: CI/CD Implementation (90 minutes)
 - GitHub Actions for Bicep with OIDC authentication
 - Infrastructure testing strategies
-- Automated deployments
-- **Hands-on**: Set up complete CI/CD pipeline with OIDC authentication
+- Automated deployments and cleanup
+- **Hands-on**: Set up complete CI/CD pipeline with destroy functionality
 
 ## Sample Dataset
 
@@ -226,28 +245,31 @@ The dataset includes:
 - Scan infrastructure code for vulnerabilities
 - Audit all deployments
 
-## Terraform Best Practices Demonstrated
+## Bicep Best Practices Demonstrated
 
 ### Project Organization
 - Consistent naming conventions
-- Environment-specific configurations
+- Environment-specific parameter files
 - Reusable modules
 - Proper tagging strategy
 
-### State Management
-- Remote state storage
-- State locking
-- Workspace separation
-- State file encryption
+### Modular Architecture
+- Separate modules for networking, security, storage, and Databricks
+- Parameter validation with decorators
+- Output management
+- Resource dependencies
 
 ### Code Quality
-- Input validation
-- Output documentation
-- Resource dependencies
-- Error handling
+- Input validation with `@allowed`, `@minValue`, `@maxValue`
+- Comprehensive output documentation
+- Clear resource dependencies
+- Error handling and validation
 
 ### Security
-- Secret management
+- Secret management with Azure Key Vault
+- Least privilege access with RBAC
+- Network isolation with VNet injection
+- Encryption at rest and in transit
 - Least privilege access
 - Network isolation
 - Encryption at rest and in transit
@@ -256,7 +278,7 @@ The dataset includes:
 
 ### Common Issues
 
-**Terraform Authentication Errors**
+**Azure Authentication Errors**
 ```bash
 # Verify Azure CLI login
 az account show
@@ -270,13 +292,16 @@ az role assignment list --assignee YOUR_CLIENT_ID
 - Check network connectivity
 - Verify workspace is in running state
 
-**State File Issues**
+**Bicep Deployment Issues**
 ```bash
-# Force unlock if state is stuck
-terraform force-unlock LOCK_ID
+# Validate Bicep template
+az bicep build --file bicep/main.bicep
 
-# Import existing resources
-terraform import azurerm_resource_group.main /subscriptions/SUB_ID/resourceGroups/RG_NAME
+# Check resource group exists
+az group show --name "rg-databricks-dev"
+
+# View deployment details
+az deployment group show --resource-group "rg-databricks-dev" --name "main"
 ```
 
 ### Getting Help
@@ -301,20 +326,26 @@ terraform import azurerm_resource_group.main /subscriptions/SUB_ID/resourceGroup
 ## CI/CD Pipeline Features
 
 ### Automated Workflows
-- Terraform validation and formatting
+- Bicep template validation and linting
 - Security scanning with Trivy
-- Infrastructure testing
+- Infrastructure testing with what-if analysis
 - Multi-environment deployments
-- Databricks artifact deployment
-- Automated rollback capabilities
+- Automated resource cleanup
+- Infrastructure destroy capability
 
 ### Pipeline Stages
-1. **Validate**: Format check, linting, security scan
-2. **Plan**: Generate execution plans for review
-3. **Apply**: Deploy infrastructure changes
-4. **Test**: Run infrastructure and data quality tests
-5. **Deploy**: Update Databricks notebooks and jobs
-6. **Notify**: Team notifications via Teams/Slack
+1. **Validate**: Bicep compilation, linting, security scan
+2. **What-If**: Generate deployment preview for review
+3. **Deploy**: Deploy infrastructure changes
+4. **Test**: Verify deployment success
+5. **Destroy**: (Optional) Clean up resources to prevent costs
+6. **Notify**: Pipeline status notifications
+
+### Key Features
+- **OIDC Authentication**: Passwordless authentication with Azure
+- **Multi-Environment**: Support for dev, staging, and production
+- **Security Scanning**: Automated vulnerability detection
+- **Cost Control**: Easy resource cleanup with destroy functionality
 
 ## Learning Resources
 
