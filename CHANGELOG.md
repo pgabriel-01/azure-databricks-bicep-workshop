@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 *No unreleased changes*
 
+## [1.0.1] - 2024-10-15
+
+### Tested
+- **Deploy Functionality**: Successfully tested complete infrastructure deployment
+- **Destroy Functionality**: Successfully tested complete infrastructure cleanup
+- **CI/CD Pipeline**: End-to-end workflow validation completed
+- **Cost Management**: Verified proper resource cleanup prevents ongoing charges
+
+### Documentation
+- Updated CHANGELOG.md with proper release documentation
+- Confirmed all features work as documented
+
 ## [1.0.0] - 2024-10-15
 
 ### Added
