@@ -80,6 +80,7 @@ module security 'modules/security.bicep' = {
     environment: environment
     logRetentionDays: logRetentionDays
     keyVaultSku: keyVaultSku
+    deploymentTimestamp: deploymentTime
     tags: commonTags
   }
 }

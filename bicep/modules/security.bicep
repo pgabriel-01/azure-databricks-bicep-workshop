@@ -22,9 +22,13 @@ param environment string
 @description('Resource tags')
 param tags object = {}
 
+@description('Deployment timestamp for uniqueness')
+param deploymentTimestamp string = ''
+
 // Variables for globally unique naming
 var prefixShort = take(replace(prefix, '-', ''), 6) // Limit prefix to 6 chars for Key Vault
-var uniqueIdentifier = uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name)
+var uniqueIdentifier = empty(deploymentTimestamp) ? uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name) : uniqueString(subscription().subscriptionId, resourceGroup().id, deployment().name, deploymentTimestamp)
+var keyVaultName = take('${prefixShort}kv${uniqueIdentifier}', 24)
 
 // Log Analytics Workspace for monitoring
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
@@ -44,7 +48,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09
 
 // Key Vault for storing secrets
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
-  name: take('${prefixShort}kv${uniqueIdentifier}', 24)
+  name: keyVaultName
   location: location
   tags: tags
   properties: {

@@ -137,8 +137,15 @@ jobs:
 
     - name: Create Resource Group
       run: |
-        rg_name="rg-databricks-${{ matrix.environment }}"
-        az group create --name "$rg_name" --location "East US" --tags Environment=${{ matrix.environment }} Project=databricks-workshop
+        environment="${{ matrix.environment }}"
+        rg_name="rg-databricks-$environment"
+        param_file="bicep/parameters/$environment.bicepparam"
+        
+        # Extract location from parameter file
+        location=$(az bicep build-params --file "$param_file" --stdout | jq -r '.parameters.location.value // "East US 2"')
+        echo "Using location: $location"
+        
+        az group create --name "$rg_name" --location "$location" --tags Environment=$environment Project=databricks-workshop
 
     - name: Bicep What-If Analysis
       run: |
@@ -182,8 +189,25 @@ jobs:
         
         echo "Deploying infrastructure to $environment environment..."
         
+        # Extract location from parameter file
+        location=$(az bicep build-params --file "$param_file" --stdout | jq -r '.parameters.location.value // "East US 2"')
+        echo "Using location: $location"
+        
         # Ensure resource group exists
-        az group create --name "$rg_name" --location "East US" --tags Environment=$environment Project=databricks-workshop
+        az group create --name "$rg_name" --location "$location" --tags Environment=$environment Project=databricks-workshop
+        
+        # Clean up any soft-deleted Key Vaults that might conflict
+        echo "Checking for soft-deleted Key Vaults in $location..."
+        deleted_vaults=$(az keyvault list-deleted --resource-type vault --location "$location" --query "[].name" -o tsv 2>/dev/null || echo "")
+        if [ ! -z "$deleted_vaults" ]; then
+          echo "Found soft-deleted Key Vaults, attempting to purge..."
+          for vault in $deleted_vaults; do
+            echo "Purging soft-deleted Key Vault: $vault"
+            az keyvault purge --name "$vault" --location "$location" 2>/dev/null || echo "Could not purge $vault (may not have permissions or vault may not exist)"
+          done
+        else
+          echo "No soft-deleted Key Vaults found"
+        fi
         
         # Deploy infrastructure
         az deployment group create \
